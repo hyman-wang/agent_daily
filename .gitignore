@@ -1,0 +1,12 @@
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+*.zip
+*.crx
+*.pem
+.vscode/
+.idea/
+coverage/
+dist/
+.workbuddy/

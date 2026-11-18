@@ -1,0 +1,11 @@
+{
+  "name": "agent-journal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "零依赖、免构建、本地优先的 Agent 日报周报浏览器扩展",
+  "scripts": {
+    "test": "node --test tests/core.test.js",
+    "check": "node --check background.js && node --check content.js && node --check dashboard.js && node --check lib/core.js && node --check lib/storage.js"
+  },
+  "license": "MIT"
+}

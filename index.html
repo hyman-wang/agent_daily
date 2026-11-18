@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Journal</title>
+<style>
+:root {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --panel-2: #1d212b;
+  --border: #2a2f3a;
+  --text: #e8eaf0;
+  --muted: #9aa3b2;
+  --accent: #6ea8fe;
+  --accent-2: #8f7bff;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --radius: 12px;
+  --shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(1200px 600px at 20% -10%, #1b2233 0%, var(--bg) 60%);
+  color: var(--text);
+  font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+  line-height: 1.55;
+}
+.layout { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 240px;
+  padding: 24px 18px;
+  background: rgba(15,17,21,.92);
+  border-right: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.brand { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; }
+.logo {
+  width: 42px; height: 42px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: grid; place-items: center; font-weight: 800; font-size: 20px;
+}
+.brand h1 { margin: 0; font-size: 18px; }
+.brand p { margin: 2px 0 0; font-size: 11px; color: var(--muted); }
+.nav { display: flex; flex-direction: column; gap: 8px; }
+.nav button {
+  appearance: none;
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.nav button:hover { background: var(--panel); color: var(--text); }
+.nav button.active {
+  background: rgba(110,168,254,.12);
+  border-color: rgba(110,168,254,.35);
+  color: var(--accent);
+}
+.sidebar .foot {
+  position: absolute; bottom: 20px; left: 18px; right: 18px;
+  padding: 12px; border-radius: 10px;
+  background: var(--panel); border: 1px solid var(--border);
+  font-size: 12px; color: var(--muted);
+}
+.main { flex: 1; padding: 28px 30px 60px; max-width: 1600px; }
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; }
+.topbar h2 { margin: 0; font-size: 24px; }
+.topbar p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.status {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 999px;
+  background: var(--panel); border: 1px solid var(--border);
+  font-size: 13px; color: var(--muted);
+}
+.status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+.status.saved .dot { background: var(--ok); }
+.view { display: none; }
+.view.active { display: block; }
+.card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 22px; margin-bottom: 22px;
+  box-shadow: var(--shadow);
+}
+.card > h3 { margin: 0 0 6px; font-size: 18px; }
+.card > .desc { margin: 0 0 18px; color: var(--muted); font-size: 13px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.mode {
+  background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+}
+.mode.on { border-color: var(--accent); }
+.mode input[type=checkbox] { display: none; }
+.mode label { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
+.mode .box {
+  width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border);
+  display: grid; place-items: center; flex: none; margin-top: 2px;
+}
+.mode.on .box { background: var(--accent); border-color: var(--accent); }
+.mode.on .box::after { content: "✓"; color: #fff; font-size: 14px; font-weight: 700; }
+.mode h4 { margin: 0; font-size: 15px; }
+.mode p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+.mode .tag {
+  display: inline-block; margin-top: 10px; padding: 3px 8px;
+  border-radius: 999px; background: rgba(110,168,254,.12);
+  color: var(--accent); font-size: 11px;
+}
+.mode .settings { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border); }
+.mode.on .settings { display: block; }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 12px; color: var(--muted); }
+.field input[type=text], .field input[type=number], .field input[type=date], .field input[type=week], .field select, .field textarea {
+  width: 100%; padding: 10px 12px; border-radius: 8px;
+  border: 1px solid var(--border); background: #12151c; color: var(--text);
+  font-size: 13px; outline: none;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+.field .hint { font-size: 11px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border);
+  background: #12151c; color: var(--muted); font-size: 12px; cursor: pointer;
+}
+.chip.on { border-color: var(--accent); color: var(--accent); background: rgba(110,168,254,.12); }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+button.action {
+  appearance: none; border: 0; border-radius: 8px; padding: 10px 18px;
+  font-size: 13px; cursor: pointer; color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+button.ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+button.ghost:hover { color: var(--text); border-color: var(--accent); }
+button.small { padding: 7px 12px; font-size: 12px; }
+.summary { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 14px; border-radius: 10px; background: #12151c; border: 1px solid var(--border); }
+.summary .item { padding: 6px 12px; border-radius: 8px; background: rgba(110,168,254,.10); border: 1px solid rgba(110,168,254,.25); font-size: 12px; }
+.note { margin-top: 12px; padding: 12px 14px; border-radius: 8px; background: rgba(74,222,128,.08); border: 1px solid rgba(74,222,128,.25); color: #86efac; font-size: 12px; }
+.note.warn { background: rgba(251,191,36,.08); border-color: rgba(251,191,36,.25); color: #fcd34d; }
+.advanced { display: none; margin-top: 16px; }
+.advanced.show { display: block; }
+.advanced textarea { width: 100%; min-height: 220px; padding: 14px; border-radius: 10px; border: 1px solid var(--border); background: #0d1017; color: #d1d5db; font-family: Consolas, monospace; font-size: 12px; resize: vertical; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.stat { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.stat .label { color: var(--muted); font-size: 12px; }
+.stat .value { font-size: 28px; font-weight: 700; margin-top: 6px; }
+.stat .sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.report-item {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px; margin-bottom: 16px;
+}
+.report-item .head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.report-item h4 { margin: 0; font-size: 17px; }
+.report-item .meta { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.badge { padding: 4px 10px; border-radius: 999px; font-size: 11px; background: rgba(74,222,128,.12); color: var(--ok); border: 1px solid rgba(74,222,128,.25); white-space: nowrap; }
+.badge.progress { background: rgba(251,191,36,.12); color: var(--warn); border-color: rgba(251,191,36,.25); }
+.report-item .summary-text { margin: 14px 0; color: #d7dce5; }
+.kv { display: grid; grid-template-columns: 90px 1fr; gap: 8px; font-size: 13px; margin: 8px 0; }
+.kv .k { color: var(--muted); }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.tags span { padding: 4px 10px; border-radius: 999px; background: rgba(143,123,255,.12); color: #b7a8ff; font-size: 11px; }
+details.turns { margin-top: 14px; border-top: 1px dashed var(--border); padding-top: 12px; }
+details.turns summary { cursor: pointer; color: var(--accent); font-size: 13px; }
+.turn { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.turn:last-child { border-bottom: 0; }
+.turn .q { color: var(--text); }
+.turn .a { color: var(--muted); margin-top: 4px; }
+.empty { text-align: center; padding: 50px 20px; color: var(--muted); }
+.empty .icon { font-size: 40px; margin-bottom: 10px; }
+.report-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.pane { min-width: 0; }
+.weekly-pane {
+  position: sticky;
+  top: 0;
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-color: var(--border) transparent;
+}
+.daily-pane {
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+  padding-right: 10px;
+  scrollbar-color: var(--accent) transparent;
+}
+.pane-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(23,26,33,.96);
+  border: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.pane-title h3 { margin: 0; font-size: 17px; }
+.pane-title span { color: var(--muted); font-size: 12px; }
+.period {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #12151c;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--accent);
+}
+.stats.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.stats.compact .stat { padding: 12px; }
+.stats.compact .stat .value { font-size: 22px; }
+@media (max-width: 1100px) {
+  .report-split { grid-template-columns: 1fr; }
+  .weekly-pane, .daily-pane { position: static; max-height: none; overflow: visible; }
+}
+.toast { position: fixed; right: 24px; bottom: 24px; padding: 12px 18px; border-radius: 10px; background: #111827; border: 1px solid var(--border); color: var(--text); box-shadow: var(--shadow); opacity: 0; transform: translateY(10px); transition: all .2s ease; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateY(0); }
+@media (max-width: 900px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; height: auto; position: static; border-right: 0; border-bottom: 1px solid var(--border); }
+  .sidebar .foot { display: none; }
+  .nav { flex-direction: row; flex-wrap: wrap; }
+  .nav button { width: auto; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">A</div>
+      <div>
+        <h1>Agent Journal</h1>
+        <p>本地日报 / 周报助手</p>
+      </div>
+    </div>
+    <nav class="nav">
+      <button class="active" data-view="report">📊 报告</button>
+      <button data-view="config">⚙️ 配置中心</button>
+    </nav>
+    <div class="foot">
+      单文件静态页面<br>
+      配置与报告在同一 HTML 内切换<br>
+      无需部署，数据保存在本机
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h2 id="pageTitle">报告</h2>
+        <p id="pageDesc">左侧当期周报，右侧日报；日报滚动时周报保持当前期</p>
+      </div>
+      <div class="status" id="status"><span class="dot"></span><span id="statusText">未保存</span></div>
+    </div>
+
+    <!-- 配置页面 -->
+    <section class="view" id="view-config">
+      <div class="card">
+        <h3>1. 采集方式</h3>
+        <p class="desc">选择一个或多个采集方式。可组合使用，系统会按优先级自动去重。</p>
+        <div class="grid">
+          <div class="mode on" data-mode="hook">
+            <input type="checkbox" id="mode-hook" checked>
+            <label for="mode-hook"><span class="box"></span><span><h4>Hook 自动采集</h4><p>每次提问必定触发，适合自动记录。</p><span class="tag">推荐主采集</span></span></label>
+            <div class="settings">
+              <div class="row">
+                <div class="field"><label>启用的 Agent</label><div class="chips" data-group="hook.agents"><span class="chip on" data-value="workbuddy">WorkBuddy / CodeBuddy</span><span class="chip on" data-value="claude">Claude Code</span><span class="chip" data-value="codex">Codex CLI</span><span class="chip" data-value="gemini">Gemini CLI</span></div></div>
+              </div>
+              <div class="row">
+                <div class="field"><label>监听事件</label><div class="chips" data-group="hook.events"><span class="chip on" data-value="UserPromptSubmit">UserPromptSubmit</span><span class="chip on" data-value="Stop">Stop</span><span class="chip" data-value="SessionEnd">SessionEnd</span></div></div>
+              </div>
+              <div class="row">
+                <div class="field"><label>注入 Token 上限</label><input type="number" data-key="hook.tokenBudget" value="500"><span class="hint">质量优先建议 500</span></div>
+                <div class="field"><label>摘要输出 Token 上限</label><input type="number" data-key="hook.outputTokenBudget" value="300"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mode on" data-mode="skill">
+            <input type="checkbox" id="mode-skill" checked>
+            <label for="mode-skill"><span class="box"></span><span><h4>Skill 手动入口</h4><p>用于打开、重建、导出报告。</p><span class="tag">手动操作</span></span></label>
+            <div class="settings">
+              <div class="row">
+                <div class="field"><label>Skill 名称</label><input type="text" data-key="skill.name" value="agent-journal"></div>
+                <div class="field"><label>触发词</label><input type="text" data-key="skill.trigger" value="打开日报 / 重建周报 / 导出报告"></div>
+              </div>
+              <div class="row"><div class="field"><label>允许调用的工具</label><input type="text" data-key="skill.tools" value="Read, Write, Bash"></div></div>
+            </div>
+          </div>
+
+          <div class="mode on" data-mode="memory">
+            <input type="checkbox" id="mode-memory" checked>
+            <label for="mode-memory"><span class="box"></span><span><h4>记忆偏好存储</h4><p>只保存偏好、路径、默认配置。</p><span class="tag">偏好存储</span></span></label>
+            <div class="settings">
+              <div class="row"><div class="field"><label>保存内容</label><div class="chips" data-group="memory.scope"><span class="chip on" data-value="preferences">偏好</span><span class="chip on" data-value="paths">路径</span><span class="chip" data-value="style">报告风格</span><span class="chip" data-value="history">历史摘要索引</span></div></div></div>
+              <div class="row"><div class="field"><label>记忆文件路径</label><input type="text" data-key="memory.path" value="~/.agent-journal/memory.json"></div></div>
+            </div>
+          </div>
+
+          <div class="mode" data-mode="listener">
+            <input type="checkbox" id="mode-listener">
+            <label for="mode-listener"><span class="box"></span><span><h4>本地日志监听</h4><p>适合不支持 Hook 的 Agent，作为兜底。</p><span class="tag">兜底采集</span></span></label>
+            <div class="settings">
+              <div class="row">
+                <div class="field"><label>监听目录</label><input type="text" data-key="listener.paths" value="~/.claude/projects, ~/.codebuddy/projects"></div>
+                <div class="field"><label>轮询间隔（秒）</label><input type="number" data-key="listener.interval" value="5"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mode" data-mode="manual">
+            <input type="checkbox" id="mode-manual">
+            <label for="mode-manual"><span class="box"></span><span><h4>手动导入</h4><p>从 JSON / Markdown / CSV 导入历史记录。</p><span class="tag">补充导入</span></span></label>
+            <div class="settings">
+              <div class="row"><div class="field"><label>支持格式</label><div class="chips" data-group="manual.formats"><span class="chip on" data-value="json">JSON</span><span class="chip on" data-value="jsonl">JSONL</span><span class="chip" data-value="markdown">Markdown</span><span class="chip" data-value="csv">CSV</span></div></div></div>
+              <div class="row"><div class="field"><label>去重键</label><input type="text" data-key="manual.dedupKey" value="turn_id"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="action small" id="presetRecommended">推荐组合</button>
+          <button class="action ghost small" id="presetHookOnly">仅 Hook</button>
+          <button class="action ghost small" id="presetManualOnly">仅手动导入</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>2. 组合策略</h3>
+        <p class="desc">查看当前组合，并调整优先级与去重规则。</p>
+        <div class="summary" id="comboSummary"></div>
+        <div id="comboNote" class="note"></div>
+        <div class="row" style="margin-top:16px">
+          <div class="field"><label>主采集来源</label><select id="primarySource"><option value="hook">Hook</option><option value="listener">本地监听</option><option value="manual">手动导入</option><option value="skill">Skill</option></select></div>
+          <div class="field"><label>去重字段</label><input type="text" data-key="combo.dedupKey" value="turn_id"></div>
+          <div class="field"><label>冲突处理</label><select data-key="combo.conflict"><option value="keep_first">保留第一条</option><option value="keep_latest">保留最新</option><option value="merge">合并字段</option></select></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>3. 通用参数</h3>
+        <p class="desc">这些参数对所有已启用的采集方式生效。</p>
+        <div class="row">
+          <div class="field"><label>数据目录</label><input type="text" data-key="general.dataDir" value="~/.agent-journal"></div>
+          <div class="field"><label>报告目录</label><input type="text" data-key="general.reportDir" value="~/.agent-journal/reports"></div>
+          <div class="field"><label>报告格式</label><select data-key="general.reportFormat"><option value="requirement">按需求聚合</option><option value="turn">按提问明细</option><option value="both">需求 + 明细</option></select></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>日报保留天数</label><input type="number" data-key="general.retentionDays" value="90"></div>
+          <div class="field"><label>周报保留周数</label><input type="number" data-key="general.retentionWeeks" value="52"></div>
+          <div class="field"><label>自动打开报告</label><select data-key="general.autoOpen"><option value="yes">是</option><option value="no">否</option></select></div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>每周几滚动周报</label>
+            <select data-key="general.weekStart">
+              <option value="1">周一</option>
+              <option value="2">周二</option>
+              <option value="3">周三</option>
+              <option value="4">周四</option>
+              <option value="5">周五</option>
+              <option value="6">周六</option>
+              <option value="0">周日</option>
+            </select>
+            <span class="hint">新周报从所选星期开始，保存后立即重新分组</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>4. 高级配置</h3>
+        <p class="desc">可直接编辑 JSON，适合精细定制或批量部署。</p>
+        <div class="actions" style="margin-top:0"><button class="action ghost small" id="toggleAdvanced">显示 JSON</button></div>
+        <div class="advanced" id="advancedBox">
+          <textarea id="jsonEditor" spellcheck="false"></textarea>
+          <div class="actions"><button class="action small" id="applyJson">应用 JSON</button><button class="action ghost small" id="formatJson">格式化</button></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>5. 保存与迁移</h3>
+        <p class="desc">配置保存在浏览器本地，可导出为 JSON 备份或导入到其他机器。</p>
+        <div class="actions">
+          <button class="action" id="saveBtn">保存配置</button>
+          <button class="action ghost" id="exportBtn">导出 JSON</button>
+          <button class="action ghost" id="importBtn">导入 JSON</button>
+          <button class="action ghost" id="resetBtn">恢复默认</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 报告页面：左周报，右日报 -->
+    <section class="view active" id="view-report">
+      <div class="card">
+        <h3>报告周期</h3>
+        <p class="desc">日报可独立滚动；在同一周内切换日期时，左侧始终保持当期周报。跨周后自动联动。</p>
+        <div class="row">
+          <div class="field"><label>日报日期</label><input type="date" id="dailyDate"></div>
+          <div class="field"><label>显示示例数据</label><select id="demoToggle"><option value="yes">显示</option><option value="no">隐藏</option></select></div>
+          <div class="field"><label>当前周报周期</label><div class="period" id="weekRangeLabel"></div></div>
+        </div>
+        <div class="actions">
+          <button class="action ghost small" id="prevDay">前一天</button>
+          <button class="action ghost small" id="todayBtn">今天</button>
+          <button class="action ghost small" id="nextDay">后一天</button>
+          <button class="action ghost small" id="prevWeek">上一周</button>
+          <button class="action ghost small" id="thisWeekBtn">本周</button>
+          <button class="action ghost small" id="nextWeek">下一周</button>
+        </div>
+      </div>
+      <div class="report-split">
+        <section class="pane weekly-pane" aria-label="当期周报">
+          <div class="pane-title"><h3>当期周报</h3><span>滚动日报时保持当前期</span></div>
+          <div class="stats compact" id="weeklyStats"></div>
+          <div id="weeklyList"></div>
+        </section>
+        <section class="pane daily-pane" id="dailyScroll" aria-label="日报">
+          <div class="pane-title"><h3>日报</h3><span id="dailyDateLabel"></span></div>
+          <div class="stats compact" id="dailyStats"></div>
+          <div id="dailyList"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "agent-journal-config";
+  var statusEl = document.getElementById("status");
+  var statusText = document.getElementById("statusText");
+  var toastEl = document.getElementById("toast");
+  var comboSummary = document.getElementById("comboSummary");
+  var comboNote = document.getElementById("comboNote");
+  var advancedBox = document.getElementById("advancedBox");
+  var jsonEditor = document.getElementById("jsonEditor");
+
+  var pageTitles = {
+    report: ["报告", "左侧当期周报，右侧日报；日报滚动时周报保持当前期"],
+    config: ["配置中心", "Hook · Skill · 记忆 · 本地监听 · 手动导入，可自由组合"]
+  };
+
+  var demoData = [
+    {
+      id: "req-001",
+      title: "实现 Agent Journal 配置中心",
+      project: "daily-agent",
+      agent: "WorkBuddy",
+      date: "2026-11-10",
+      week: "2026-W46",
+      status: "进行中",
+      turnCount: 6,
+      summary: "已完成单文件配置页与日报/周报视图合并，支持 Hook、Skill、记忆等方式组合配置。",
+      keyPoints: ["配置与报告合并到同一 HTML", "支持多种采集方式组合", "提供 JSON 导入导出"],
+      artifacts: ["index.html", "config.html"],
+      tests: "页面交互已手动验证",
+      tags: ["前端", "配置", "日报"],
+      turns: [
+        { q: "把配置和日报放到同一个 HTML", a: "已合并为单文件多视图结构" },
+        { q: "支持 Hook、Skill、记忆组合", a: "已提供复选和组合策略" }
+      ]
+    },
+    {
+      id: "req-002",
+      title: "设计本地采集方案",
+      project: "daily-agent",
+      agent: "Claude Code",
+      date: "2026-11-10",
+      week: "2026-W46",
+      status: "已完成",
+      turnCount: 4,
+      summary: "确定 Hook 自动采集为主，Skill 手动入口为辅，记忆只保存偏好。",
+      keyPoints: ["Hook 负责自动采集", "Skill 负责手动入口", "避免重复注入和递归"],
+      artifacts: ["docs/prd.md"],
+      tests: "方案评审通过",
+      tags: ["架构", "Hook"],
+      turns: [
+        { q: "记忆和 Hook 哪个更适合", a: "Hook 更适合自动采集，记忆只存偏好" }
+      ]
+    },
+    {
+      id: "req-003",
+      title: "整理开源项目结构",
+      project: "daily-agent",
+      agent: "WorkBuddy",
+      date: "2026-11-09",
+      week: "2026-W46",
+      status: "已完成",
+      turnCount: 3,
+      summary: "梳理了安装、卸载、报告生成与数据保留策略，明确默认不删除用户数据。",
+      keyPoints: ["一键安装", "一键卸载", "默认保留报告数据"],
+      artifacts: ["README.md", "LICENSE"],
+      tests: "待补充自动化测试",
+      tags: ["开源", "安装"],
+      turns: [
+        { q: "卸载时是否保留数据", a: "默认保留，只有 --purge 才删除" }
+      ]
+    }
+  ];
+
+  function defaultConfig() {
+    return {
+      modes: { hook: true, skill: true, memory: true, listener: false, manual: false },
+      hook: { agents: ["workbuddy", "claude"], events: ["UserPromptSubmit", "Stop"], tokenBudget: 500, outputTokenBudget: 300 },
+      skill: { name: "agent-journal", trigger: "打开日报 / 重建周报 / 导出报告", tools: "Read, Write, Bash" },
+      memory: { scope: ["preferences", "paths"], path: "~/.agent-journal/memory.json" },
+      listener: { paths: "~/.claude/projects, ~/.codebuddy/projects", interval: 5 },
+      manual: { formats: ["json", "jsonl"], dedupKey: "turn_id" },
+      combo: { primarySource: "hook", dedupKey: "turn_id", conflict: "keep_latest" },
+      general: { dataDir: "~/.agent-journal", reportDir: "~/.agent-journal/reports", reportFormat: "requirement", retentionDays: 90, retentionWeeks: 52, autoOpen: "yes", weekStart: 1 }
+    };
+  }
+
+  function deepGet(obj, path) { return path.split(".").reduce(function (acc, key) { return acc && acc[key]; }, obj); }
+  function deepSet(obj, path, value) {
+    var keys = path.split("."), cur = obj;
+    for (var i = 0; i < keys.length - 1; i++) {
+      if (!cur[keys[i]] || typeof cur[keys[i]] !== "object") cur[keys[i]] = {};
+      cur = cur[keys[i]];
+    }
+    cur[keys[keys.length - 1]] = value;
+  }
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    setTimeout(function () { toastEl.classList.remove("show"); }, 1800);
+  }
+  function markUnsaved() { statusEl.classList.remove("saved"); statusText.textContent = "未保存"; }
+  function markSaved() { statusEl.classList.add("saved"); statusText.textContent = "已保存"; }
+  function setModeUI(mode, on) {
+    var el = document.querySelector('.mode[data-mode="' + mode + '"]');
+    if (el) el.classList.toggle("on", on);
+    var input = document.getElementById("mode-" + mode);
+    if (input) input.checked = on;
+  }
+  function setChips(group, values) {
+    document.querySelectorAll('[data-group="' + group + '"] .chip').forEach(function (chip) {
+      chip.classList.toggle("on", values.indexOf(chip.dataset.value) >= 0);
+    });
+  }
+  function getChips(group) {
+    var out = [];
+    document.querySelectorAll('[data-group="' + group + '"] .chip.on').forEach(function (chip) { out.push(chip.dataset.value); });
+    return out;
+  }
+  function collectConfig() {
+    var cfg = defaultConfig();
+    document.querySelectorAll("[data-key]").forEach(function (el) {
+      var val = el.value;
+      if (el.type === "number") val = Number(val);
+      deepSet(cfg, el.dataset.key, val);
+    });
+    cfg.hook.agents = getChips("hook.agents");
+    cfg.hook.events = getChips("hook.events");
+    cfg.memory.scope = getChips("memory.scope");
+    cfg.manual.formats = getChips("manual.formats");
+    cfg.modes = {
+      hook: document.getElementById("mode-hook").checked,
+      skill: document.getElementById("mode-skill").checked,
+      memory: document.getElementById("mode-memory").checked,
+      listener: document.getElementById("mode-listener").checked,
+      manual: document.getElementById("mode-manual").checked
+    };
+    return cfg;
+  }
+  function applyConfig(cfg) {
+    if (!cfg || typeof cfg !== "object") return;
+    Object.keys(cfg.modes || {}).forEach(function (mode) { setModeUI(mode, !!cfg.modes[mode]); });
+    document.querySelectorAll("[data-key]").forEach(function (el) {
+      var val = deepGet(cfg, el.dataset.key);
+      if (val !== undefined && val !== null) el.value = val;
+    });
+    setChips("hook.agents", (cfg.hook && cfg.hook.agents) || []);
+    setChips("hook.events", (cfg.hook && cfg.hook.events) || []);
+    setChips("memory.scope", (cfg.memory && cfg.memory.scope) || []);
+    setChips("manual.formats", (cfg.manual && cfg.manual.formats) || []);
+    renderSummary();
+  }
+  function renderSummary() {
+    var modes = {
+      hook: document.getElementById("mode-hook").checked,
+      skill: document.getElementById("mode-skill").checked,
+      memory: document.getElementById("mode-memory").checked,
+      listener: document.getElementById("mode-listener").checked,
+      manual: document.getElementById("mode-manual").checked
+    };
+    comboSummary.innerHTML = "";
+    Object.keys(modes).forEach(function (key) {
+      if (!modes[key]) return;
+      var item = document.createElement("div");
+      item.className = "item";
+      item.textContent = key.toUpperCase();
+      comboSummary.appendChild(item);
+    });
+    if (!comboSummary.children.length) {
+      var empty = document.createElement("div");
+      empty.className = "item";
+      empty.textContent = "未选择任何采集方式";
+      comboSummary.appendChild(empty);
+    }
+    if (!modes.hook && !modes.listener && !modes.manual) {
+      comboNote.className = "note warn";
+      comboNote.textContent = "当前组合没有自动采集来源，只能手动操作。若要自动记录，请启用 Hook 或本地监听。";
+    } else {
+      comboNote.className = "note";
+      comboNote.textContent = "当前组合职责清晰：Hook 自动采集，Skill 手动操作，记忆保存偏好，不会互相冲突。";
+    }
+  }
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(collectConfig()));
+    markSaved();
+    toast("配置已保存");
+  }
+  function load() {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) { applyConfig(defaultConfig()); markUnsaved(); return; }
+    try { applyConfig(JSON.parse(raw)); markSaved(); }
+    catch (e) { applyConfig(defaultConfig()); markUnsaved(); }
+  }
+
+  function switchView(name) {
+    document.querySelectorAll(".view").forEach(function (v) { v.classList.remove("active"); });
+    document.getElementById("view-" + name).classList.add("active");
+    document.querySelectorAll(".nav button").forEach(function (b) { b.classList.toggle("active", b.dataset.view === name); });
+    document.getElementById("pageTitle").textContent = pageTitles[name][0];
+    document.getElementById("pageDesc").textContent = pageTitles[name][1];
+    if (name === "report") renderReport();
+  }
+
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function isoDate(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function parseDate(value) {
+    return value ? new Date(value + "T00:00:00") : new Date();
+  }
+  function configuredWeekStart() {
+    var el = document.querySelector('[data-key="general.weekStart"]');
+    return Number(el ? el.value : 1);
+  }
+  function getWeekRange(value) {
+    var date = parseDate(value);
+    var weekStart = configuredWeekStart();
+    var diff = (date.getDay() - weekStart + 7) % 7;
+    var start = new Date(date.getFullYear(), date.getMonth(), date.getDate() - diff);
+    var end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+    return { start: isoDate(start), end: isoDate(end) };
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function reportCard(item) {
+    var html = '<div class="report-item">';
+    html += '<div class="head"><div><h4>' + escapeHtml(item.title) + '</h4><div class="meta">' + escapeHtml(item.project) + ' · ' + escapeHtml(item.agent) + ' · ' + item.turnCount + ' 次提问 · 更新于 ' + escapeHtml(item.date) + '</div></div>';
+    html += '<span class="badge' + (item.status === "进行中" ? " progress" : "") + '">' + escapeHtml(item.status) + '</span></div>';
+    html += '<div class="summary-text">' + escapeHtml(item.summary) + '</div>';
+    html += '<div class="kv"><div class="k">关键点</div><div>' + item.keyPoints.map(escapeHtml).join("；") + '</div></div>';
+    html += '<div class="kv"><div class="k">涉及文件</div><div>' + item.artifacts.map(escapeHtml).join("、") + '</div></div>';
+    html += '<div class="kv"><div class="k">测试</div><div>' + escapeHtml(item.tests) + '</div></div>';
+    html += '<div class="tags">' + item.tags.map(function (t) { return '<span>' + escapeHtml(t) + '</span>'; }).join("") + '</div>';
+    html += '<details class="turns"><summary>查看提问明细（' + item.turns.length + '）</summary>';
+    item.turns.forEach(function (t) {
+      html += '<div class="turn"><div class="q">问：' + escapeHtml(t.q) + '</div><div class="a">答：' + escapeHtml(t.a) + '</div></div>';
+    });
+    html += '</details></div>';
+    return html;
+  }
+  function renderStats(el, items) {
+    var agents = {}, turns = 0, done = 0;
+    items.forEach(function (i) { agents[i.agent] = true; turns += i.turnCount; if (i.status === "已完成") done++; });
+    el.innerHTML =
+      '<div class="stat"><div class="label">需求数</div><div class="value">' + items.length + '</div><div class="sub">按需求聚合</div></div>' +
+      '<div class="stat"><div class="label">提问次数</div><div class="value">' + turns + '</div><div class="sub">累计提问</div></div>' +
+      '<div class="stat"><div class="label">涉及 Agent</div><div class="value">' + Object.keys(agents).length + '</div><div class="sub">不同 Agent</div></div>' +
+      '<div class="stat"><div class="label">完成率</div><div class="value">' + (items.length ? Math.round(done / items.length * 100) : 0) + '%</div><div class="sub">已完成需求</div></div>';
+  }
+  function currentDemo() {
+    return document.getElementById("demoToggle").value === "yes" ? demoData : [];
+  }
+  function renderDaily() {
+    var date = document.getElementById("dailyDate").value;
+    document.getElementById("dailyDateLabel").textContent = date;
+    var items = currentDemo().filter(function (i) { return i.date === date; });
+    renderStats(document.getElementById("dailyStats"), items);
+    var list = document.getElementById("dailyList");
+    list.innerHTML = items.length ? items.map(reportCard).join("") : '<div class="card empty"><div class="icon">📭</div>当天暂无记录</div>';
+  }
+  function renderWeekly() {
+    var range = getWeekRange(document.getElementById("dailyDate").value);
+    document.getElementById("weekRangeLabel").textContent = range.start + " ~ " + range.end;
+    var items = currentDemo().filter(function (i) { return i.date >= range.start && i.date <= range.end; });
+    renderStats(document.getElementById("weeklyStats"), items);
+    var list = document.getElementById("weeklyList");
+    list.innerHTML = items.length ? items.map(reportCard).join("") : '<div class="card empty"><div class="icon">🗂️</div>本期暂无记录</div>';
+  }
+  function renderReport() {
+    renderWeekly();
+    renderDaily();
+  }
+  function shiftDate(delta) {
+    var el = document.getElementById("dailyDate");
+    var d = parseDate(el.value);
+    d.setDate(d.getDate() + delta);
+    el.value = isoDate(d);
+    renderReport();
+  }
+  function shiftWeek(delta) {
+    var el = document.getElementById("dailyDate");
+    var d = parseDate(el.value);
+    d.setDate(d.getDate() + delta * 7);
+    el.value = isoDate(d);
+    renderReport();
+  }
+
+  document.querySelectorAll(".nav button").forEach(function (btn) {
+    btn.addEventListener("click", function () { switchView(btn.dataset.view); });
+  });
+  document.querySelectorAll(".mode input[type=checkbox]").forEach(function (input) {
+    input.addEventListener("change", function () {
+      setModeUI(input.id.replace("mode-", ""), input.checked);
+      renderSummary();
+      markUnsaved();
+    });
+  });
+  document.querySelectorAll(".chip").forEach(function (chip) {
+    chip.addEventListener("click", function () { chip.classList.toggle("on"); markUnsaved(); });
+  });
+  document.querySelectorAll("[data-key]").forEach(function (el) {
+    el.addEventListener("input", markUnsaved);
+    el.addEventListener("change", markUnsaved);
+  });
+  document.getElementById("primarySource").addEventListener("change", markUnsaved);
+  document.getElementById("saveBtn").addEventListener("click", save);
+  document.getElementById("presetRecommended").addEventListener("click", function () {
+    var cfg = collectConfig();
+    cfg.modes = { hook: true, skill: true, memory: true, listener: false, manual: false };
+    applyConfig(cfg); markUnsaved();
+  });
+  document.getElementById("presetHookOnly").addEventListener("click", function () {
+    var cfg = collectConfig();
+    cfg.modes = { hook: true, skill: false, memory: false, listener: false, manual: false };
+    applyConfig(cfg); markUnsaved();
+  });
+  document.getElementById("presetManualOnly").addEventListener("click", function () {
+    var cfg = collectConfig();
+    cfg.modes = { hook: false, skill: false, memory: false, listener: false, manual: true };
+    applyConfig(cfg); markUnsaved();
+  });
+  document.getElementById("toggleAdvanced").addEventListener("click", function () {
+    var show = advancedBox.classList.toggle("show");
+    this.textContent = show ? "隐藏 JSON" : "显示 JSON";
+    if (show) jsonEditor.value = JSON.stringify(collectConfig(), null, 2);
+  });
+  document.getElementById("applyJson").addEventListener("click", function () {
+    try { applyConfig(JSON.parse(jsonEditor.value)); markUnsaved(); toast("JSON 已应用"); }
+    catch (e) { toast("JSON 格式错误"); }
+  });
+  document.getElementById("formatJson").addEventListener("click", function () {
+    try { jsonEditor.value = JSON.stringify(JSON.parse(jsonEditor.value || "{}"), null, 2); }
+    catch (e) { toast("无法格式化"); }
+  });
+  document.getElementById("exportBtn").addEventListener("click", function () {
+    var blob = new Blob([JSON.stringify(collectConfig(), null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "agent-journal.config.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  document.getElementById("importBtn").addEventListener("click", function () {
+    var input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.onchange = function () {
+      var file = input.files && input.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        try { applyConfig(JSON.parse(reader.result)); markUnsaved(); toast("配置已导入"); }
+        catch (e) { toast("导入失败：JSON 格式错误"); }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  });
+  document.getElementById("resetBtn").addEventListener("click", function () {
+    applyConfig(defaultConfig()); markUnsaved(); toast("已恢复默认配置");
+  });
+
+  document.getElementById("dailyDate").addEventListener("change", renderReport);
+  document.getElementById("demoToggle").addEventListener("change", renderReport);
+  document.querySelector('[data-key="general.weekStart"]').addEventListener("change", renderReport);
+  document.getElementById("prevDay").addEventListener("click", function () { shiftDate(-1); });
+  document.getElementById("nextDay").addEventListener("click", function () { shiftDate(1); });
+  document.getElementById("todayBtn").addEventListener("click", function () {
+    document.getElementById("dailyDate").value = isoDate(new Date());
+    renderReport();
+  });
+  document.getElementById("prevWeek").addEventListener("click", function () { shiftWeek(-1); });
+  document.getElementById("nextWeek").addEventListener("click", function () { shiftWeek(1); });
+  document.getElementById("thisWeekBtn").addEventListener("click", function () {
+    document.getElementById("dailyDate").value = isoDate(new Date());
+    renderReport();
+  });
+
+  document.getElementById("dailyDate").value = isoDate(new Date());
+  load();
+  renderReport();
+})();
+</script>
+</body>
+</html>

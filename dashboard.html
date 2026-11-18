@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Agent Journal · 日报周报助手</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="dashboard.html" aria-label="Agent Journal 首页">
+      <span class="brand-mark" aria-hidden="true">AJ</span>
+      <span><strong>Agent Journal</strong><small>把每次提问，沉淀成成长记录</small></span>
+    </a>
+    <nav class="top-actions" aria-label="数据操作">
+      <button id="import-button" class="button button-quiet" type="button">导入 JSON</button>
+      <input id="import-file" type="file" accept="application/json,.json" hidden>
+      <button id="export-json" class="button button-quiet" type="button">备份全部数据</button>
+      <button id="open-settings" class="button button-primary" type="button">记录设置</button>
+    </nav>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero" aria-labelledby="period-title">
+      <div>
+        <p class="eyebrow">YOUR AGENT ACTIVITY</p>
+        <h1 id="period-title">今日提问日报</h1>
+        <p id="period-subtitle" class="period-subtitle"></p>
+      </div>
+      <button id="export-markdown" class="button button-export" type="button">导出本期 Markdown</button>
+    </section>
+
+    <section class="toolbar" aria-label="日报周报导航">
+      <div class="segmented" role="group" aria-label="报表类型">
+        <button id="view-day" class="segment active" type="button" aria-pressed="true">日报</button>
+        <button id="view-week" class="segment" type="button" aria-pressed="false">周报</button>
+      </div>
+      <div class="period-nav">
+        <button id="previous-period" class="icon-button" type="button" aria-label="上一期">←</button>
+        <button id="current-period" class="button button-quiet" type="button">回到当前</button>
+        <button id="next-period" class="icon-button" type="button" aria-label="下一期">→</button>
+      </div>
+    </section>
+
+    <section class="stats-grid" aria-label="本期统计">
+      <article class="stat-card stat-total"><span>问题总数</span><strong id="stat-total">0</strong><small>每一次提问都值得记录</small></article>
+      <article class="stat-card"><span>活跃天数</span><strong id="stat-days">0</strong><small id="stat-days-note">本自然日内</small></article>
+      <article class="stat-card"><span>使用 Agent</span><strong id="stat-agents">0</strong><small>本期使用过的工具</small></article>
+    </section>
+
+    <section class="journal-panel" aria-labelledby="records-title">
+      <div class="records-header">
+        <div><h2 id="records-title">提问记录</h2><p id="records-count">按时序整理</p></div>
+        <div class="filters">
+          <label class="search-field"><span class="sr-only">搜索提问</span><input id="search-input" type="search" placeholder="搜索标题、摘要或原文…" autocomplete="off"></label>
+          <label><span class="sr-only">按 Agent 筛选</span><select id="agent-filter"><option value="all">全部 Agent</option></select></label>
+        </div>
+      </div>
+      <div id="records-container" class="records-container" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer class="footer">所有记录仅保存在当前浏览器的 chrome.storage.local 中，不会上传到任何服务器。</footer>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <dialog id="settings-dialog" class="settings-dialog">
+    <div class="dialog-heading"><div><p class="eyebrow">PREFERENCES</p><h2>记录设置</h2></div><button id="close-settings" class="icon-button" type="button" aria-label="关闭设置">×</button></div>
+    <section class="setting-section">
+      <label class="switch-row"><span><strong>自动记录提问</strong><small>关闭后，内容脚本不会发送新记录</small></span><input id="auto-capture" type="checkbox" role="switch"></label>
+    </section>
+    <section class="setting-section">
+      <h3>按 Agent 启用</h3>
+      <p class="setting-help">只控制后续记录，不影响已保存的数据。</p>
+      <div id="agent-settings" class="agent-settings"></div>
+    </section>
+    <section class="setting-section">
+      <label class="theme-row" for="theme-select"><span><strong>外观主题</strong><small>跟随系统或固定明暗主题</small></span><select id="theme-select"><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></label>
+    </section>
+    <section class="setting-section danger-zone">
+      <div><h3>清空全部数据</h3><p class="setting-help">删除所有提问记录，设置会保留。此操作无法撤销。</p></div>
+      <button id="clear-data" class="button button-danger" type="button">清空数据</button>
+    </section>
+  </dialog>
+
+  <script src="lib/core.js"></script>
+  <script src="lib/storage.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>
