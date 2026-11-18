@@ -2,9 +2,11 @@
   "name": "agent-journal",
   "version": "1.0.0",
   "private": true,
-  "description": "零依赖、免构建、本地优先的 Agent 日报周报浏览器扩展",
+  "description": "本地 Agent 日报周报助手：Hook 自动采集、精简存储与静态 HTML 报告",
   "scripts": {
-    "test": "node --test tests/core.test.js",
+    "test": "node --test tests/core.test.js && python -m unittest discover -s tests -p \"test_*.py\"",
+    "test:js": "node --test tests/core.test.js",
+    "test:python": "python -m unittest discover -s tests -p \"test_*.py\"",
     "check": "node --check background.js && node --check content.js && node --check dashboard.js && node --check lib/core.js && node --check lib/storage.js"
   },
   "license": "MIT"

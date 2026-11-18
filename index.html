@@ -401,6 +401,24 @@ details.turns summary { cursor: pointer; color: var(--accent); font-size: 13px; 
           <button class="action ghost" id="resetBtn">恢复默认</button>
         </div>
       </div>
+
+      <div class="card">
+        <h3>6. 应用到本机</h3>
+        <p class="desc">HTML 不能直接修改本地 Agent 配置。请先点击“导出 JSON”，再到项目目录执行安装器。</p>
+        <div class="row">
+          <div class="field">
+            <label>安装命令</label>
+            <input type="text" readonly value="python install.py --config agent-journal.config.json" onclick="this.select()">
+            <span class="hint">将导出的 agent-journal.config.json 放到项目根目录；安装器会备份并合并 Hook。</span>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field"><label>检查状态</label><input type="text" readonly value="python -m agent_journal status" onclick="this.select()"></div>
+          <div class="field"><label>打开真实报告</label><input type="text" readonly value="python -m agent_journal open" onclick="this.select()"></div>
+          <div class="field"><label>一键卸载（保留数据）</label><input type="text" readonly value="python uninstall.py" onclick="this.select()"></div>
+        </div>
+        <div class="note">安装后请重启 Agent 或新开任务，再用一次测试提问验证。报告数据默认保存在 ~/.agent-journal/。</div>
+      </div>
     </section>
 
     <!-- 报告页面：左周报，右日报 -->

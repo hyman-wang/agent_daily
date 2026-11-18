@@ -10,3 +10,8 @@ Thumbs.db
 coverage/
 dist/
 .workbuddy/
+__pycache__/
+*.py[cod]
+.test-data/
+.agent-journal/
+agent-journal.config.json
